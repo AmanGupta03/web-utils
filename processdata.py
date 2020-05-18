@@ -3,7 +3,6 @@
 
 from gensim.parsing.preprocessing import STOPWORDS
 from gensim.utils import tokenize
-from nltk import FreqDist
 import pandas as pd
 import numpy as np
 

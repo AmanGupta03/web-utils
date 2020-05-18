@@ -84,29 +84,35 @@ def get_about_url(html, url):
     return None
 
 
-def get_static_text_content(url):
+def get_static_text_content(url, timeout=5):
   """ scrap static content form url and preprocess it """
 
   content = []
-  
-  try:
-    with Timeout(30):
-      res = requests.get(url, headers=headers, verify=False, timeout=10)
+
+  with Timeout(20):
+    try:
+      res = requests.get(url, headers=headers, verify=False, timeout=timeout, allow_redirects=True)
+      res.raise_for_status()
       content.extend(processdata.preprocess(text_from_html(res.text)))
-      if len(content) > 0 and content[0] == "invalidcontentfound": return content
-
+      if len(content) > 0 and content[0] == "invalidcontentfound": 
+        return ['ERROR_MSG', 'Non English']
       abt_url = get_about_url(res.text, url)
-
       if abt_url != None:
-        res = requests.get(abt_url, headers=headers, verify=False, timeout=10)
-        content.extend(processdata.preprocess(text_from_html(res.text)))
+         res = requests.get(abt_url, verify=False, timeout=10, allow_redirects=True)
+         content.extend(processdata.preprocess(text_from_html(res.text)))
       return content
-    
-  except:
-    return content
+    except requests.exceptions.Timeout as errt:
+      return ['ERROR_MSG', 'Timeout: (connect time={timeout:} sec)'.format(timeout=timeout)]
+    except requests.exceptions.HTTPError as errh:
+      return ['ERROR_MSG', errh.args[0]]
+    except requests.exceptions.ConnectionError as errc:
+      return ['ERROR_MSG', errc.args[0]]
+    except requests.exceptions.RequestException as err:
+      return ['ERROR_MSG', err.args[0]]
+  content = ['ERROR_MSG', 'site take too long to complete request']
   return content
 
-
+#changed
 def get_dynamic_text_content(url):
   """ scrap dynamic content form url and preprocess it """
   
@@ -114,7 +120,8 @@ def get_dynamic_text_content(url):
   try:
     browser.get(url)
     content.extend(processdata.preprocess(text_from_html(browser.page_source)))
-    if len(content) > 0 and content[0] == "invalidcontentfound": return content
+    if len(content) > 0 and content[0] == "invalidcontentfound": 
+      return ['ERROR_MSG', 'Non English']
     abt_url = get_about_url(browser.page_source, url)
    
     if abt_url != None:
@@ -122,54 +129,65 @@ def get_dynamic_text_content(url):
       content.extend(processdata.preprocess(text_from_html(browser.page_source)))
     return content
   except:
-    return content
+    return ['ERROR_MSG', 'site take too long to complete request']
 
-
-def get_scrapped_text(url, dynamic):
+#changed
+def get_scrapped_text(url, dynamic, timeout=5):
   """ scrap text content from url """
 
-  content = get_static_text_content(url) 
-  if len(content) > 0 and content[0] == "invalidcontentfound": return []
+  content = get_static_text_content(url, timeout) 
+  if len(content) > 0 and content[0] == 'ERROR_MSG': return content
   dy_content = []
   if (len(content) < SUFFICIENT and dynamic): dy_content = get_dynamic_text_content(url)
-  if len(dy_content) > 0 and dy_content[0] == "invalidcontentfound": dy_content =  []
   if len(content) >= len(dy_content): return content
-  else: return dy_content
+  else: return dy_content 
 
 
-def get_url_and_content(url, dynamic=True):
+def get_url_and_content(url, dynamic=True, timeout=5):
   """ return dictionary object with url, and scrapped_content """
 
   final_url = url
   content = []
   
   if url.startswith('http'):
-    content = get_scrapped_text(url, dynamic)
+    content = get_scrapped_text(url, dynamic, timeout)
   else:
-    content = get_scrapped_text('https://'+url, dynamic)
+    content = get_scrapped_text('https://'+url, dynamic, timeout)
     final_url = 'https://'+url
     if len(content) < MINIMUM:
-      content = get_scrapped_text('http://'+url, dynamic)
+      content = get_scrapped_text('http://'+url, dynamic, timeout)
       final_url = 'http://'+url
   
-  return {'url': final_url, 'content': ' '.join(content)}
+  return {'url': final_url, 'content': content}
 
 
-def get_text_content(url, dynamic=True):
+def get_text_content(url, dynamic=True, timeout=5, ext=True):
   """ params -: url -: as a string with or without http/https
                 Note it will find suitable protocol b/w http and https automatically if doesn't include in url
                 dynamic -: boolean variable to decide whether to scrap dynamic content or not
 
-                return -: string consist text content from url 
-                          or 
-                          raise exception when _i) either url is invalid/inactive
-                                                ii) site doen't have english content
-                                                iii) failed to scrap significant amount of content 
-                                                iv) sites take too long to respond """  
+                return -: dictionary consist of 'status', 'content', 'url'
+                          content will be error message if 'status' = fail """
 
-
-  content =  get_url_and_content(url, dynamic)['content']
-  if len(content.split()) >= MINIMUM: return content
-  else: raise
-
-
+  if(ext and (not url.startswith('http'))):
+     url = extract(url).domain + '.' + extract(url).suffix
+  data =  get_url_and_content(url, dynamic, timeout)
+  content = data['content']
+  url = data['url']
+  status = ''
+  
+  if len(content) > 0 and content[0] == 'ERROR_MSG': 
+    status = 'fail'
+    content = content[1]
+  elif len(content) < MINIMUM:
+    status = 'fail'
+    content = 'Insufficient text content scrapped from site, cannot process request further'
+  else:
+    status = 'success'
+    content = ' '.join(content)
+  
+  return {
+      'status':status,
+      'url': url,
+      'content': content
+  }
