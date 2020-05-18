@@ -161,7 +161,7 @@ def get_url_and_content(url, dynamic=True, timeout=5):
   return {'url': final_url, 'content': content}
 
 
-def get_text_content(url, dynamic=True, timeout=5, ext=True):
+def get_text_content(url, dynamic=True, timeout=5, modify_url=True):
   """ params -: url -: as a string with or without http/https
                 Note it will find suitable protocol b/w http and https automatically if doesn't include in url
                 dynamic -: boolean variable to decide whether to scrap dynamic content or not
@@ -169,11 +169,11 @@ def get_text_content(url, dynamic=True, timeout=5, ext=True):
                 return -: dictionary consist of 'status', 'content', 'url'
                           content will be error message if 'status' = fail """
 
-  if(ext and (not url.startswith('http'))):
+  if(modify_url and (not url.startswith('http'))):
      url = extract(url).domain + '.' + extract(url).suffix
   data =  get_url_and_content(url, dynamic, timeout)
   content = data['content']
-  url = data['url']
+  if(modify_url): url = data['url']
   status = ''
   
   if len(content) > 0 and content[0] == 'ERROR_MSG': 
