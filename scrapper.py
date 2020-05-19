@@ -87,7 +87,6 @@ def get_static_text_content(url, timeout=5):
     return ['ERROR_MSG', errc.args[0]]
   except requests.exceptions.RequestException as err:
     return ['ERROR_MSG', err.args[0]]
-  content = ['ERROR_MSG', 'site take too long to complete request']
   return content
 
 def get_dynamic_text_content(url):
