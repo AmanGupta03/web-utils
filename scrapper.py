@@ -30,27 +30,6 @@ headers = {
 SUFFICIENT = 50  #Minimum words require to avoid dynamic content scrapping
 MINIMUM = 10 #Minimum content required
 
-
-def get_status_code(url, default=0):
-  """ return status code of url and 0 in case of exception """
-  try:
-    with Timeout(10):
-      res = requests.get(url, headers=headers, verify=False, timeout=3, stream=False)
-      return res.status_code
-  except:
-    return default
-  return default
-
-
-def get_valid_url(url):
-  """ return url with valid protocol and status_code """
-
-  if(get_status_code('https://'+url) == 200):
-    return {'url':'https://'+url, 'status':200}
-  else:
-    return {'url': 'http://'+url, 'status': get_status_code('http://'+url)}
-
-
 def tag_visible(element):
   """ check visible tag """
 
