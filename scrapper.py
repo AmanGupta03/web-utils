@@ -9,7 +9,6 @@ from bs4 import BeautifulSoup
 from bs4.element import Comment
 from tldextract import extract
 from selenium import webdriver
-from timeout import Timeout
 import requests
 import processdata
 import warnings
@@ -89,26 +88,26 @@ def get_static_text_content(url, timeout=5):
 
   content = []
 
-  with Timeout(20):
-    try:
-      res = requests.get(url, headers=headers, verify=False, timeout=timeout, allow_redirects=True)
-      res.raise_for_status()
+  try:
+    res = requests.get(url, headers=headers, verify=False, timeout=timeout, allow_redirects=True)
+    res.raise_for_status()
+    content.extend(processdata.preprocess(text_from_html(res.text)))
+    if len(content) > 0 and content[0] == "invalidcontentfound": 
+      return ['ERROR_MSG', 'Non English']
+    abt_url = get_about_url(res.text, url)
+    if abt_url != None:
+      res = requests.get(abt_url, verify=False, timeout=timeout, allow_redirects=True)
       content.extend(processdata.preprocess(text_from_html(res.text)))
-      if len(content) > 0 and content[0] == "invalidcontentfound": 
-        return ['ERROR_MSG', 'Non English']
-      abt_url = get_about_url(res.text, url)
-      if abt_url != None:
-         res = requests.get(abt_url, verify=False, timeout=10, allow_redirects=True)
-         content.extend(processdata.preprocess(text_from_html(res.text)))
-      return content
-    except requests.exceptions.Timeout as errt:
-      return ['ERROR_MSG', 'Timeout: (connect time={timeout:} sec)'.format(timeout=timeout)]
-    except requests.exceptions.HTTPError as errh:
-      return ['ERROR_MSG', errh.args[0]]
-    except requests.exceptions.ConnectionError as errc:
-      return ['ERROR_MSG', errc.args[0]]
-    except requests.exceptions.RequestException as err:
-      return ['ERROR_MSG', err.args[0]]
+    return content
+  
+  except requests.exceptions.Timeout as errt:
+    return ['ERROR_MSG', 'Timeout: (connect time={timeout:} sec)'.format(timeout=timeout)]
+  except requests.exceptions.HTTPError as errh:
+    return ['ERROR_MSG', errh.args[0]]
+  except requests.exceptions.ConnectionError as errc:
+    return ['ERROR_MSG', errc.args[0]]
+  except requests.exceptions.RequestException as err:
+    return ['ERROR_MSG', err.args[0]]
   content = ['ERROR_MSG', 'site take too long to complete request']
   return content
 
