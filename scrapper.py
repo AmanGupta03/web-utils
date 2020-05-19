@@ -75,9 +75,10 @@ def get_static_text_content(url, timeout=5):
       return ['ERROR_MSG', 'Non English']
     abt_url = get_about_url(res.text, url)
     if abt_url != None:
-      res = requests.get(abt_url, verify=False, timeout=timeout, allow_redirects=True)
-      content.extend(processdata.preprocess(text_from_html(res.text)))
-    return content
+      try:
+        res = requests.get(abt_url, verify=False, timeout=timeout, allow_redirects=True)
+        content.extend(processdata.preprocess(text_from_html(res.text)))
+      except: return content
   
   except requests.exceptions.Timeout as errt:
     return ['ERROR_MSG', 'Timeout: (connect time={timeout:} sec)'.format(timeout=timeout)]
