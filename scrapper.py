@@ -112,7 +112,6 @@ def get_static_text_content(url, timeout=5):
   content = ['ERROR_MSG', 'site take too long to complete request']
   return content
 
-#changed
 def get_dynamic_text_content(url):
   """ scrap dynamic content form url and preprocess it """
   
@@ -131,7 +130,6 @@ def get_dynamic_text_content(url):
   except:
     return ['ERROR_MSG', 'site take too long to complete request']
 
-#changed
 def get_scrapped_text(url, dynamic, timeout=5):
   """ scrap text content from url """
 
