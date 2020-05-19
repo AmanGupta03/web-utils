@@ -186,8 +186,8 @@ def get_text_content(url, dynamic=True, timeout=5, modify_url=True):
     status = 'success'
     content = ' '.join(content)
   
-  return {
+  return dict({
       'status':status,
       'url': url,
       'content': content
-  }
+    })
