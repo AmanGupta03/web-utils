@@ -82,11 +82,11 @@ def get_static_text_content(url, timeout=5):
   except requests.exceptions.Timeout as errt:
     return ['ERROR_MSG', 'Timeout: (connect time={timeout:} sec)'.format(timeout=timeout)]
   except requests.exceptions.HTTPError as errh:
-    return ['ERROR_MSG', errh.args[0]]
+    return ['ERROR_MSG', str(errh.args[0])]
   except requests.exceptions.ConnectionError as errc:
-    return ['ERROR_MSG', errc.args[0]]
+    return ['ERROR_MSG', str(errc.args[0]).split(':')[-1]]
   except requests.exceptions.RequestException as err:
-    return ['ERROR_MSG', err.args[0]]
+    return ['ERROR_MSG', str(err.args[0])]
   return content
 
 def get_dynamic_text_content(url):
