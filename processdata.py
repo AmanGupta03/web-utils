@@ -5,23 +5,92 @@ from gensim.parsing.preprocessing import STOPWORDS
 from gensim.utils import tokenize
 import pandas as pd
 import numpy as np
+import sqlite3
 
-PATH = ''
 
-#Dictionary
-print('loading dictionary...')
-df = pd.read_csv(PATH + 'dictionary.csv')
-dictionary = set([row[0] for row in df.values.tolist()])
+def get_words_data():
+  """ return dictionary, lemma and embedding from words table """
+  
+  try:
+    conn = sqlite3.connect('web.db')
+    cur = conn.cursor()
+    rows = cur.execute('SELECT * from dictionary')
 
-#Lemmatization
-print('loading words lemma...')
-df = pd.read_csv(PATH + 'lemmatization.csv')
-lemma = {row[0]:row[1] for row in df.values.tolist()}
+    dictionary, lemma, embd = set(), {}, {}
 
-del df
+    for row in rows:
+      dictionary.add(row[0])
+      lemma[row[0]] = row[2]
+      embd[row[0]] = row[1]
+    
+    return dictionary, lemma, embd
+
+  except sqlite3.Error as error:
+    print(error)
+
+
+dictionary, lemma, embd = get_words_data()
 
 #Frequent Terms find on web
 AVOID = {'error', 'enable', 'jump', 'rights', 'block', 'condition', 'javascript', 'fail', 'menu', 'filipino', 'register', 'site', 'request', 'dutch', 'espanol', 'reserved', 'help', 'home', 'url', 'italiano', 'page', 'navigate', 'cookie', 'browser', 'disable', 'cancel', 'unsupported', 'english', 'francais', 'login', 'privacy', 'term', 'section', 'disabled', 'skip', 'main', 'copyright', 'uses', 'navigation', 'more', 'anymore', 'log', 'open', 'homepage', 'corona', 'policy', 'content', 'terms', 'sign', 'upgrade', 'portugal', 'older', 'require', 'know', 'indonesia', 'support', 'results', 'language', 'coronavirus', 'best', 'load', 'deutsch', 'cookies'}
+
+DIMENSION = 50
+
+def get_embedding(word):
+  try:
+    return np.frombuffer(embd[word], dtype=float)
+  except:
+    return None
+
+
+def average_word_embedding(words):
+  """ param -: list of words 
+      return -: average embedding of list of words as numpy array or None in case of failure"""
+
+  res = np.zeros(DIMENSION)
+  tot_words = 0
+  
+  for word in words:
+    word_embd = get_embedding(word)
+    if word_embd is not None:
+      tot_words += 1
+      res = np.add(res, word_embd)
+  
+  if tot_words == 0: return None
+  else: return res/tot_words
+
+
+def sent_embedding(sentence):
+  """ param -: space seprated string 
+      return -: sentence embedding as numpy array or None in case of failure """
+
+  return average_word_embedding(sentence.split())
+
+
+def sent_embedding_in_bytes(sentence):
+  """ param -: space seprated string  
+      return -: sentence embedding in bytes """
+  try:
+    return sent_embedding(sentence).tostring()
+  except: 
+    return None
+
+
+def compress_sentence(sentence):
+  """ param -: space seprated string  
+      return -: compressed space seprated string in form of 'word1:freq1 word2:freq2' 
+      arranged in descending order by frequency """
+
+  freq_lst = FreqDist(sentence.split()).most_common()
+  return ' '.join([row[0]+':'+str(row[1]) for row in freq_lst])
+
+
+def expand_sentence(sentence):
+  """ param -: compressed form of sentence
+      return -: expand form of sentence """
+
+  exp_word = lambda cmp_word: (cmp_word.split(':')[0] + ' ')*(int(cmp_word.split(':')[1])-1) + cmp_word.split(':')[0] 
+  return ' '.join([exp_word(word) for word in sentence.split()])
 
 
 def lemmatize(word):
